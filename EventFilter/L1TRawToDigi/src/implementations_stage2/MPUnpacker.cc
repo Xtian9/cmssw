@@ -81,9 +81,9 @@ namespace stage2 {
 
      // Two jets
      for (unsigned nJet=0; nJet < 2; nJet++){
-std::cout<<"nJet "<<nJet<<std::endl;
+
        raw_data = block.payload()[fjet+nJet];
-std::cout<<"raw_data "<<raw_data<<std::endl;
+
        if (raw_data == 0)
             continue;
 
