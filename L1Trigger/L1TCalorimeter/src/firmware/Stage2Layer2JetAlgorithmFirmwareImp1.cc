@@ -28,7 +28,7 @@ inline bool operator > ( l1t::Jet& a, l1t::Jet& b )
 // jet mask, needs to be configurable at some point
 // just a square for now
 // for 1 do greater than, for 2 do greater than equal to
-/*int mask_[9][9] = {
+int mask_[9][9] = {
   { 1,1,1,1,1,1,1,1,1 },
   { 1,1,1,1,1,1,1,1,2 },
   { 1,1,1,1,1,1,1,2,2 },
@@ -38,9 +38,9 @@ inline bool operator > ( l1t::Jet& a, l1t::Jet& b )
   { 1,1,2,2,2,2,2,2,2 },
   { 1,2,2,2,2,2,2,2,2 },
   { 2,2,2,2,2,2,2,2,2 }
-};*/
+};
 
-int mask_[9][9] = {
+/*int mask_[9][9] = {
   { 1,1,1,1,1,1,1,1,1 },
   { 2,1,1,1,1,1,1,1,1 },
   { 2,2,1,1,1,1,1,1,1 },
@@ -50,7 +50,7 @@ int mask_[9][9] = {
   { 2,2,2,2,2,2,2,1,1 },
   { 2,2,2,2,2,2,2,2,1 },
   { 2,2,2,2,2,2,2,2,2 }
-};
+};*/
 
 std::vector<l1t::Jet>::iterator start_, end_;
 
@@ -279,115 +279,75 @@ int l1t::Stage2Layer2JetAlgorithmFirmwareImp1::donutPUEstimate(int jetEta, int j
 
 int l1t::Stage2Layer2JetAlgorithmFirmwareImp1::chunkyDonutPUEstimate(int jetEta, int jetPhi, int size, const std::vector<l1t::CaloTower> & towers){
 
-  //Declare the range to carry out the algorithm over
+  // the range to carry out the algorithm over
   int etaMax=40, etaMin=-40, phiMax=72, phiMin=1;
 
-  //ring is a vector with 4 ring strips, one for each side of the ring
+  // ring is a vector with 4 ring strips, one for each side of the ring
+  // order is PhiUp, PhiDown, EtaUp, EtaDown
   std::vector<int> ring(4,0);
 
-  // Loop over number of strips
+  // number of strips in donut - should make this configurable
+  int nStrips = 3;
 
-  int iphiUp = jetPhi + size;
-  while ( iphiUp > phiMax ) iphiUp -= phiMax;
-  int iphiDown = jetPhi - size;
-  while ( iphiDown < phiMin ) iphiDown += phiMax;
+  // loop over strips
+  for (int stripIt=0; stripIt<nStrips; stripIt++) {
 
-  int iphiUp1 = jetPhi + size + 1;
-  while ( iphiUp1 > phiMax ) iphiUp1 -= phiMax;
-  int iphiDown1 = jetPhi - size - 1;
-  while ( iphiDown1 < phiMin ) iphiDown1 += phiMax;
+    int iphiUp   = jetPhi + size + stripIt;
+    int iphiDown = jetPhi - size - stripIt;
+    while ( iphiUp > phiMax ) iphiUp -= phiMax;
+    while ( iphiDown < phiMin ) iphiDown += phiMax;
 
-  int iphiUp2 = jetPhi + size + 2;
-  while ( iphiUp2 > phiMax ) iphiUp2 -= phiMax;
-  int iphiDown2 = jetPhi - size - 2;
-  while ( iphiDown2 < phiMin ) iphiDown2 += phiMax;
+    int ietaUp   = jetEta + size + stripIt;
+    int ietaDown = jetEta - size - stripIt;
+    if(jetEta<0 && ietaUp>=0) ietaUp+=1;
+    if(jetEta>0 && ietaDown<=0) ietaDown-=1;
+    
+    // do PhiUp and PhiDown
+    for (int ieta=jetEta-size+1; ieta<jetEta+size; ++ieta) {
+      
+      if (ieta>etaMax || ieta<etaMin) continue;
+      
+      int towEta = ieta;
+      if (jetEta>0 && towEta<=0) towEta-=1;
+      if (jetEta<0 && towEta>=0) towEta+=1;
+            
+      const CaloTower& towPhiUp = CaloTools::getTower(towers, towEta, iphiUp);
+      int towEt = towPhiUp.hwPt();
+      ring[0] += towEt;
+            
+      const CaloTower& towPhiDown = CaloTools::getTower(towers, towEta, iphiDown);
+      towEt = towPhiDown.hwPt();
+      ring[1] += towEt;
+            
+    } 
+    
+    // do EtaUp and EtaDown
+    for (int iphi=jetPhi-size+1; iphi<jetPhi+size; ++iphi) {
+      
+      int towPhi = iphi;
+      while ( towPhi > phiMax ) towPhi -= phiMax;
+      while ( towPhi < phiMin ) towPhi += phiMax;
 
-  int ietaUp = (jetEta + size > etaMax) ? 999 : jetEta+size;
-  int ietaDown = (jetEta - size < etaMin) ? 999 : jetEta-size;
-
-  int ietaUp1 = (jetEta + size + 1 > etaMax) ? 999 : jetEta+size+1;
-  int ietaDown1 = (jetEta - size - 1 < etaMin) ? 999 : jetEta-size-1;
-
-  int ietaUp2 = (jetEta + size + 2 > etaMax) ? 999 : jetEta+size+2;
-  int ietaDown2 = (jetEta - size -2 < etaMin) ? 999 : jetEta-size-2;
-
-  for (int ieta = jetEta - size+1; ieta < jetEta + size; ++ieta)   
-  {
-
-    if (ieta > etaMax || ieta < etaMin) continue;
-    int towerEta;
-
-    if (jetEta > 0 && ieta <=0){
-      towerEta = ieta-1;
-    } else if (jetEta < 0 && ieta >=0){
-      towerEta = ieta+1;
-    } else {
-      towerEta=ieta;
-    }
-
-    const CaloTower& tow = CaloTools::getTower(towers, towerEta, iphiUp);
-    int towEt = tow.hwPt();
-    ring[0]+=towEt;
-
-    const CaloTower& tow1 = CaloTools::getTower(towers, towerEta, iphiUp1);
-    towEt = tow1.hwPt();
-    ring[0]+=towEt;
-
-    const CaloTower& tow2 = CaloTools::getTower(towers, towerEta, iphiUp2);
-    towEt = tow2.hwPt();
-    ring[0]+=towEt;
-
-    const CaloTower& tow3 = CaloTools::getTower(towers, towerEta, iphiDown);
-    towEt = tow3.hwPt();
-    ring[1]+=towEt;
-
-    const CaloTower& tow4 = CaloTools::getTower(towers, towerEta, iphiDown1);
-    towEt = tow4.hwPt();
-    ring[1]+=towEt;
-
-    const CaloTower& tow5 = CaloTools::getTower(towers, towerEta, iphiDown2);
-    towEt = tow5.hwPt();
-    ring[1]+=towEt;
-
-  } 
-
-  for (int iphi = jetPhi - size+1; iphi < jetPhi + size; ++iphi)   
-  {
-
-    int towerPhi = iphi;
-    while ( towerPhi > phiMax ) towerPhi -= phiMax;
-    while ( towerPhi < phiMin ) towerPhi += phiMax;
-
-    const CaloTower& tow = CaloTools::getTower(towers, ietaUp, towerPhi);
-    int towEt = tow.hwPt();
-    ring[2]+=towEt;
-
-    const CaloTower& tow1 = CaloTools::getTower(towers, ietaUp1, towerPhi);
-    towEt = tow1.hwPt();
-    ring[2]+=towEt;
-
-    const CaloTower& tow2 = CaloTools::getTower(towers, ietaUp2, towerPhi);
-    towEt = tow2.hwPt();
-    ring[2]+=towEt;
-
-    const CaloTower& tow3 = CaloTools::getTower(towers, ietaDown, towerPhi);
-    towEt = tow3.hwPt();
-    ring[3]+=towEt;
-
-    const CaloTower& tow4 = CaloTools::getTower(towers, ietaDown1, towerPhi);
-    towEt = tow4.hwPt();
-    ring[3]+=towEt;
-
-    const CaloTower& tow5 = CaloTools::getTower(towers, ietaDown2, towerPhi);
-    towEt = tow5.hwPt();
-    ring[3]+=towEt;
-
-  } 
-
-  //for the Donut Subtraction we only use the middle 2 (in energy) ring strips
+      if (ietaUp>=etaMin && ietaUp<=etaMax) {    
+	const CaloTower& towEtaUp = CaloTools::getTower(towers, ietaUp, towPhi);
+	int towEt = towEtaUp.hwPt();
+	ring[2] += towEt;
+      }
+      
+      if (ietaDown>=etaMin && ietaDown<=etaMax) {
+	const CaloTower& towEtaDown = CaloTools::getTower(towers, ietaDown, towPhi);
+	int towEt = towEtaDown.hwPt();
+	ring[3] += towEt;
+      }
+      
+    } 
+    
+  }
+  
+  // for donut subtraction we only use the middle 2 (in energy) ring strips
   std::sort(ring.begin(), ring.end(), std::greater<int>());
-
   return ( ring[1]+ring[2] ); 
+
 }
 
 
