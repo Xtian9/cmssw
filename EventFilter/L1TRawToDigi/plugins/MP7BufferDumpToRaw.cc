@@ -338,22 +338,21 @@ MP7BufferDumpToRaw::getBlocks(int iBoard)
 
     std::vector<uint32_t> data;
     if (packetisedData_) {
-
       const PacketData& p = txPacketReader_.get(iBoard);
       PacketData::const_iterator itr = p.begin();
       for (unsigned i=0; i<txIndex_.at(iBoard); i++) itr++;
+std::cout<<"txindex "<<txIndex_.at(iBoard)<<std::endl;
 
       LogDebug("L1T") << "Found packet [" << itr->first_ << ", " << itr->last_ << "]";
-      LogDebug("L1T") << "Link " << link << " has " << itr->links_.find(link)->second.size() << " frames";
+      LogDebug("L1T") << "Link " << link << " has " << itr->size() << " frames";//links_.find(link)->second.size() << " frames";
 
-      for (unsigned iFrame=0; iFrame<itr->links_.find(link)->second.size(); ++iFrame) {
+      for (unsigned iFrame=0; iFrame<itr->size(); ++iFrame) {//links_.find(link)->second.size(); ++iFrame) {
 	uint64_t d = itr->links_.find(link)->second.at(iFrame);
 	data.push_back(d);
       }
 
     }
     else {
-
       for (unsigned iFrame=txIndex_.at(iBoard); iFrame<txIndex_.at(iBoard)+size; ++iFrame) {
 	uint64_t d = txFileReader_.get(iBoard).link(link).at(iFrame);
 	LogDebug("L1T") << "Frame " << iFrame << " : " << std::hex << d;
@@ -370,7 +369,11 @@ MP7BufferDumpToRaw::getBlocks(int iBoard)
 
   }
 
-  if (!packetisedData_) {
+  if (packetisedData_) {
+    rxIndex_.at(iBoard)++;
+    txIndex_.at(iBoard)++;
+  }
+  else {
     rxIndex_.at(iBoard) += nFramesPerEvent_;
     txIndex_.at(iBoard) += nFramesPerEvent_;
   }

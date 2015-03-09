@@ -132,7 +132,7 @@ L1TStage2Layer2Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   iEvent.getByToken(m_towerToken,towers);
   
   int bxFirst = towers->getFirstBX();
-  int bxLast = towers->getLastBX();
+  int bxLast = towers->getLastBX()-1;
 
   LogDebug("L1TDebug") << "First BX=" << bxFirst << ", last BX=" << bxLast << std::endl;
   
